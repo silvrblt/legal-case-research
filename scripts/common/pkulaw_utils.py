@@ -71,8 +71,14 @@ def derive_region(court_name: str) -> str:
 
 
 def flatten_court(last_instance_court) -> tuple:
-    """LastInstanceCourt 是 {层级码: 名称} 的嵌套对象。
-    键按长度排序：最短的是省级，最长的是具体法院。返回 (省级地域, 最末级法院全称)。"""
+    """LastInstanceCourt 取 (省级地域, 最末级法院全称)。
+    兼容两种 MCP 格式：① 旧版 {层级码: 名称} 嵌套对象（键按长度排序：最短=省级，最长=具体法院）；
+    ② 新版 list（按省→辖区→具体法院顺序排列，首元素=省级，末元素=具体法院，按位置取，勿按长度排）。"""
+    if isinstance(last_instance_court, list):
+        lst = [str(x) for x in last_instance_court if x]
+        if not lst:
+            return "", ""
+        return lst[0], lst[-1]
     if not isinstance(last_instance_court, dict) or not last_instance_court:
         return "", ""
     items = sorted(last_instance_court.items(), key=lambda kv: len(kv[0]))
@@ -80,7 +86,11 @@ def flatten_court(last_instance_court) -> tuple:
 
 
 def flatten_leaf(nested) -> str:
-    """对 Category / CaseGrade / DocumentAttr 这类多级嵌套对象，取最末级（键最长）的值。"""
+    """对 Category / CaseGrade / DocumentAttr 取最末级（最具体）的值。
+    兼容旧版嵌套 dict（键最长者）与新版 MCP 的 list（末元素最具体）。"""
+    if isinstance(nested, list):
+        lst = [str(x) for x in nested if x]
+        return lst[-1] if lst else ""
     if not isinstance(nested, dict) or not nested:
         return ""
     items = sorted(nested.items(), key=lambda kv: len(kv[0]))

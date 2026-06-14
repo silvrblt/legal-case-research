@@ -25,6 +25,7 @@ import json
 import sys
 import time
 import urllib.request
+import urllib.error
 from pathlib import Path
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / ".mcp.json"
@@ -77,14 +78,21 @@ class MCPClient:
 
     def _post(self, payload, capture_session=False):
         data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(self.url, data=data, headers=self._headers(), method="POST")
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            if capture_session:
-                sid = resp.headers.get("Mcp-Session-Id")
-                if sid:
-                    self.session_id = sid
-            body = resp.read()
-        return parse_response(body) if body else None
+        for attempt in range(5):
+            req = urllib.request.Request(self.url, data=data, headers=self._headers(), method="POST")
+            try:
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    if capture_session:
+                        sid = resp.headers.get("Mcp-Session-Id")
+                        if sid:
+                            self.session_id = sid
+                    body = resp.read()
+                return parse_response(body) if body else None
+            except urllib.error.HTTPError as e:
+                if e.code == 429 and attempt < 4:
+                    time.sleep(6 * (attempt + 1))  # 限流退避：6s,12s,18s,24s
+                    continue
+                raise
 
     def next_id(self):
         self._rpc_id += 1
@@ -179,9 +187,13 @@ def main():
         for c in data:
             if not isinstance(c, dict):
                 continue
-            g = c.get("Gid")
+            # 法宝关键词接口新版不再返回 Gid；以 Url（每文书唯一）兜底合成稳定主键，
+            # 使下游全管道（按 Gid 索引）无须改动。Gid 存在时仍优先用 Gid（向后兼容）。
+            g = c.get("Gid") or c.get("Url") or c.get("CaseFlag")
             if not g:
                 continue
+            if not c.get("Gid"):
+                c["Gid"] = g
             tag = w or "(仅title)"
             if g in pool:
                 q = pool[g].setdefault("_query", [])
@@ -192,7 +204,7 @@ def main():
                 court = str(c.get("LastInstanceCourt", ""))
                 c["_优先"] = next((pc for pc in priority_courts if pc and pc in court), "")
                 pool[g] = c
-        time.sleep(0.3)  # 轻微限速
+        time.sleep(2.5)  # 限速：法宝接口有突发配额，过密会 429
 
     cases = list(pool.values())
     raw_path.write_text(json.dumps(cases, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -201,8 +213,10 @@ def main():
     from collections import Counter
     grade = Counter()
     for c in cases:
-        cg = str(c.get("CaseGrade", ""))
-        grade["普通(07)" if "07" in cg else f"其他({cg or '空'})"] += 1
+        cg = c.get("CaseGrade")
+        flat = cg if isinstance(cg, list) else ([cg] if cg else [])
+        is_pu = any(("07" in str(x)) or ("普通案例" in str(x)) for x in flat)
+        grade["普通案例(07)" if is_pu else f"其他({'/'.join(str(x) for x in flat) or '空'})"] += 1
     prio = sum(1 for c in cases if c.get("_优先"))
     print("== 每词命中数 ==")
     for w, n in per_word.items():

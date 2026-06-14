@@ -18,7 +18,18 @@ import re
 
 RESULT_ENUM = {"驳回", "全部支持", "部分支持", "撤销改判", ""}
 RELEVANCE_ENUM = {"高", "中", "低", ""}
-TRACK_ENUM = {"core", "parallel", "typical"}
+# core/parallel/typical 为证券集团案管道词；其余为通用管道分流词（学理/散案）。
+TRACK_ENUM = {"core", "parallel", "typical",
+              "分析民事", "对照行政", "下级留痕", "权威附录", "剔除"}
+
+
+def _grade_has(cg, token: str) -> bool:
+    """CaseGrade 既可能是旧版嵌套 dict，也可能是新版 MCP 的 list（如 ["普通案例"]）。"""
+    if isinstance(cg, dict):
+        return any(token in k for k in cg)
+    if isinstance(cg, list):
+        return any(token in str(x) for x in cg)
+    return False
 
 
 def _norm_name(s: str) -> str:
@@ -58,17 +69,19 @@ _COLLECTION_HINT = ("发布", "十大", "典型案例", "参考案例", "案例�
 
 
 def _leaf(nested) -> str:
-    """取多级嵌套对象最末级（键最长）的值；非 dict 返回空。"""
+    """取多级嵌套对象最末级（键最长）的值；list 取首元素；非 dict/list 返回空。"""
+    if isinstance(nested, list):
+        return str(nested[0]) if nested else ""
     if not isinstance(nested, dict) or not nested:
         return ""
     return sorted(nested.items(), key=lambda kv: len(kv[0]))[-1][1]
 
 
 def _is_collection_entry(r: dict) -> bool:
-    """判断是否为'汇编/典型案例/报道'条目：无 07、或非判决书裁定书、或标题含汇编特征。
+    """判断是否为'汇编/典型案例/报道'条目：无 07/普通案例、或非判决书裁定书、或标题含汇编特征。
     这类条目合法地没有单独案号，缺 CaseFlag 仅作 warning。"""
     cg = r.get("CaseGrade")
-    has07 = isinstance(cg, dict) and any("07" in k for k in cg)
+    has07 = _grade_has(cg, "07") or _grade_has(cg, "普通案例")
     doc = _leaf(r.get("DocumentAttr"))
     is_doc = doc in ("判决书", "裁定书", "调解书", "决定书")
     title = r.get("Title") or ""
@@ -88,15 +101,15 @@ def _check_record_core(r: dict, i: int, rep: Report, require_body_fields: bool):
         else:
             rep.err(f"第{i}条缺必填字段 CaseFlag（Title={str(r.get('Title'))[:20]}…）")
     cg = r.get("CaseGrade")
-    if cg is not None and not isinstance(cg, dict):
-        rep.err(f"第{i}条 CaseGrade 应为嵌套对象（MCP 原样），实为 {type(cg).__name__}")
+    if cg is not None and not isinstance(cg, (dict, list)):
+        rep.err(f"第{i}条 CaseGrade 应为嵌套对象或数组（MCP 原样），实为 {type(cg).__name__}")
     lic = r.get("LastInstanceCourt")
-    if lic is not None and not isinstance(lic, dict):
-        rep.err(f"第{i}条 LastInstanceCourt 应为嵌套对象，实为 {type(lic).__name__}")
+    if lic is not None and not isinstance(lic, (dict, list)):
+        rep.err(f"第{i}条 LastInstanceCourt 应为嵌套对象或数组，实为 {type(lic).__name__}")
     if not r.get("Url"):
         rep.warn(f"第{i}条（{r.get('CaseFlag','?')}）缺 Url，引用将无法溯源")
-    # 双轨分流依据：07 普通案例应有正文
-    if require_body_fields and isinstance(cg, dict) and any("07" in k for k in cg):
+    # 双轨分流依据：普通案例(07)应有正文
+    if require_body_fields and (_grade_has(cg, "07") or _grade_has(cg, "普通案例")):
         if not r.get("Ascertain"):
             rep.warn(f"第{i}条（{r.get('CaseFlag','?')}）CaseGrade=07 但 Ascertain 为空——"
                      f"请核实是否字段丢失（双轨分流依赖它）")
@@ -151,7 +164,8 @@ def validate_04(data) -> Report:
             if not r.get("CaseFlag") or not r.get("Title"):
                 rep.err(f"第{i}条平行判决留痕缺 CaseFlag/Title")
         else:
-            _check_record_core(r, i, rep, require_body_fields=(track in (None, "core")))
+            _check_record_core(r, i, rep,
+                               require_body_fields=(track in (None, "core", "分析民事")))
     rep.note(f"共 {len(records)} 条")
     return rep
 

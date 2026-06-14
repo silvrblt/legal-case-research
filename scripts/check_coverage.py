@@ -153,9 +153,12 @@ def main():
     years = []
     for c in raw:
         cg = c.get("CaseGrade")
-        if isinstance(cg, dict) and cg:
+        if isinstance(cg, dict) and cg:  # 旧版 MCP：嵌套 dict
             grade["普通(07)" if any("07" in k for k in cg) else
                    "/".join(sorted(set(cg.values())))] += 1
+        elif isinstance(cg, list) and cg:  # 新版 MCP：list（如 ["普通案例"]）
+            is_pu = any(("07" in str(x)) or ("普通案例" in str(x)) for x in cg)
+            grade["普通案例(07)" if is_pu else "/".join(str(x) for x in cg)] += 1
         else:
             grade["（无等级）"] += 1
         _, court = flatten_court(c.get("LastInstanceCourt"))

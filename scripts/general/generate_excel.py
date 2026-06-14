@@ -96,18 +96,31 @@ def build_appendix_rows(raw_idx, screened):
         if gid and gid not in candidates:
             candidates[gid] = c
 
+    def _g_has(g, tok):  # CaseGrade 兼容旧版 dict 与新版 MCP 的 list
+        if isinstance(g, dict):
+            return any(tok in k for k in g)
+        if isinstance(g, list):
+            return any(tok in str(x) for x in g)
+        return False
+
+    def _g_str(g):
+        if isinstance(g, list):
+            return "/".join(str(x) for x in g)
+        return flatten_leaf(g) if isinstance(g, dict) else ""
+
     rows, i = [], 1
     for rec in candidates.values():
         grade = rec.get("CaseGrade")
-        if not isinstance(grade, dict) or not grade:
+        if not grade:
             continue
-        if "07" in grade:
+        # 普通案例(07)进主清单，权威附录只收经典/评析/指导/公报/参考/典型等非普通案例
+        if _g_has(grade, "07") or _g_has(grade, "普通案例"):
             continue
         rows.append({
             "序号": i,
             "案件名称": rec.get("Title", ""),
             "案号": rec.get("CaseFlag", ""),
-            "案件等级": flatten_leaf(grade),
+            "案件等级": _g_str(grade),
             "北大法宝链接": clean_url(rec.get("Url", "")),
         })
         i += 1

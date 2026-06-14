@@ -82,16 +82,21 @@ class MCPClient:
 
     def _post(self, payload, capture_session=False):
         data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(self.url, data=data, headers=self._headers(), method="POST")
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            if capture_session:
-                sid = resp.headers.get("Mcp-Session-Id")
-                if sid:
-                    self.session_id = sid
-            body = resp.read()
-        if not body:
-            return None
-        return parse_response(body)
+        for attempt in range(5):
+            req = urllib.request.Request(self.url, data=data, headers=self._headers(), method="POST")
+            try:
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    if capture_session:
+                        sid = resp.headers.get("Mcp-Session-Id")
+                        if sid:
+                            self.session_id = sid
+                    body = resp.read()
+                return parse_response(body) if body else None
+            except urllib.error.HTTPError as e:
+                if e.code == 429 and attempt < 4:
+                    time.sleep(6 * (attempt + 1))  # 限流退避：6s,12s,18s,24s
+                    continue
+                raise
 
     def next_id(self):
         self._rpc_id += 1
@@ -144,7 +149,10 @@ def extract_data(rpc_result):
 
 
 def leaf(d):
-    if isinstance(d, dict) and d:
+    if isinstance(d, list):  # 新版 MCP：list（末元素最具体）
+        lst = [x for x in d if x]
+        return str(lst[-1]) if lst else ""
+    if isinstance(d, dict) and d:  # 旧版 MCP：嵌套 dict
         return sorted(d.items(), key=lambda kv: len(kv[0]))[-1][1]
     return ""
 
@@ -196,9 +204,12 @@ def main():
             continue
         per_word[w] = len(data)
         for rec in data:
-            gid = rec.get("Gid")
+            # 法宝新版不再返回 Gid；以 Url（每文书唯一）兜底合成稳定主键，下游按 Gid 索引无须改动
+            gid = rec.get("Gid") or rec.get("Url") or rec.get("CaseFlag")
             if not gid:
                 continue
+            if not rec.get("Gid"):
+                rec["Gid"] = gid
             if gid in by_gid:
                 q = by_gid[gid].setdefault("_query", [])
                 if w not in q:
@@ -206,7 +217,7 @@ def main():
             else:
                 rec["_query"] = [w]
                 by_gid[gid] = rec
-        time.sleep(0.3)
+        time.sleep(2.5)  # 限速：法宝接口有突发配额，过密会 429
 
     records = list(by_gid.values())
     raw_path.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -98,7 +98,8 @@ description: 类案检索与分析工作流。当用户提供一段案情 + 检�
 
 ## 关键事实（务必牢记）
 
-1. **只有 `CaseGrade` 含 "07"（普通案例）的条目，`Ascertain`/`Identified`/`RefereeBasis`/`RefereeResult` 才有完整正文。** 经典案例（05）、评析案例等只返回 metadata，正文字段为空。
+1. **只有普通案例条目，`Ascertain`/`Identified`/`RefereeBasis`/`RefereeResult` 才有完整正文。** 经典/参考/公报/典型/评析案例只返回 metadata，正文字段为空。
+   > ⚠️ **MCP 格式变更（2026-06 起）**：关键词接口**不再返回 `Gid`**；`CaseGrade`/`LastInstanceCourt`/`Category`/`DocumentAttr` 由旧版嵌套 dict 变为 **list**（如 `["普通案例"]`，省级在首、具体法院在末）；普通案例标识为中文 `"普通案例"` 而非 `"07"`。脚本层（`fetch_cases` 以 `Url` 合成 Gid、`pkulaw_utils.flatten_*`、`pipeline_schema`、`generate_excel`、`check_coverage`）已做向后兼容补丁，dict/list 两种格式皆可；新写脚本须沿用此兼容，勿再假设 dict/Gid/"07"。
 2. 因此采用**双轨制**：普通案例进分析管道；经典/评析案例进"权威案例附录"（仅记录案号+标题+URL）。
 3. **关键词策略铁律**：案由/法律关系词放 `title`，方法论/技术性词放 `fulltext`。判决书标题极少含"算法推荐"这类方法论词，硬塞进 title 会命中评析类文章而非判决书。详见 `methodology/keyword-strategy.md`。
 4. 单次检索上限 10 条 → 必须多轮迭代累加，靠不同关键词组合扩大样本。

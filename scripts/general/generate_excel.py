@@ -1,5 +1,5 @@
 """
-generate_excel.py —— 生成案件清单 Excel（通用类案研究版）
+generate_excel.py —— 生成案件清单 Excel（通用/散案管道）
 ─────────────────────────────────────────────
 用法：python3 scripts/general/generate_excel.py <research_dir>
 输入：

@@ -1,5 +1,5 @@
 """
-fetch_cases.py —— 直连北大法宝 MCP-over-HTTP 批量检索（通用类案研究）
+fetch_cases.py —— 直连北大法宝 MCP-over-HTTP 批量检索（通用/散案管道）
 ─────────────────────────────────────────────
 背景：get_case_list 单次返回 25+ 字段全要素，若经 Claude Code 的 MCP 工具通道逐次返回会灌入
 对话上下文。本脚本用 .mcp.json 里同一套 endpoint + Bearer Token，以标准库 urllib 直接发

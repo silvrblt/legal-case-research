@@ -1,5 +1,5 @@
 """
-download_fulltext.py —— 导出"用于分析的案件"判决原文（通用 / 证券 两套工作流共用）
+download_fulltext.py —— 导出"用于分析的案件"判决原文（散案/集团案两类管道共用）
 ─────────────────────────────────────────────
 用法：python3 scripts/download_fulltext.py <research_dir> [--docx]
 输入：

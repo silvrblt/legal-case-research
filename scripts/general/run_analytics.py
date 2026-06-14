@@ -7,7 +7,7 @@ run_analytics.py —— 六维统计分析（样本量自适应 + 出图）
       <research_dir>/output/_charts/*.png + manifest.json （供报告占位符 ![chart:key] 插图）
 
 脚本计算"可计算"的统计并出图；法律解读由 Claude Code 基于本结果在报告中完成。
-与证券专题对齐的两条自适应规则（见 scripts/common/stats_guard.py）：
+两条样本自适应规则（散案/集团案通用，见 scripts/common/stats_guard.py）：
   · 定量：样本越大解锁越强的统计（描述 → 卡方/Fisher → 建模）。
   · 定性：样本越小，单争点的论证越要深挖（depth_mode）。
 

@@ -1,5 +1,5 @@
 """
-fetch_cases.py —— 直连北大法宝 MCP-over-HTTP 批量检索（证券虚假陈述专题）
+fetch_cases.py —— 直连北大法宝 MCP-over-HTTP 批量检索（集团案管道·证券虚假陈述示范）
 ─────────────────────────────────────────────
 背景：get_case_list 单次返回 25+ 字段全要素，10 条即可达数万 token。若经由 Claude Code
 的 MCP 工具通道逐次返回，结果会灌入对话上下文，40 次轮替检索不可承受。本脚本用 .mcp.json

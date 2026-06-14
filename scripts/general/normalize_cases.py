@@ -1,5 +1,5 @@
 """
-normalize_cases.py —— 拍平 MCP 嵌套字段 + 派生确定性字段（通用类案研究版）
+normalize_cases.py —— 拍平 MCP 嵌套字段 + 派生确定性字段（通用/散案管道）
 ─────────────────────────────────────────────
 用法：python3 scripts/general/normalize_cases.py <research_dir>
 输入：<research_dir>/05_enriched_cases.json （Claude Code 已做完判断性编码）

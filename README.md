@@ -1,7 +1,7 @@
 # 类案检索研究工作流（Legal Case-Research Workflow）
 
 [![CI](https://github.com/silvrblt/legal-case-research/actions/workflows/ci.yml/badge.svg)](https://github.com/silvrblt/legal-case-research/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-A4142A.svg)](LICENSE)
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue.svg)
 
 > **A reproducible legal case-research workflow** that turns a fact pattern + search brief into a citation-checked, chart-rich Word report and an Excel case list — with sample-size-adaptive statistics and machine-verified citation traceability. Works with the Peking University Law (北大法宝) MCP **or your own case data**, and with **any** capable AI agent (not only Claude). See [AGENTS.md](AGENTS.md).

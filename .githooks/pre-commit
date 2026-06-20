@@ -1,0 +1,18 @@
+#!/bin/sh
+# 护城河守门 + 密钥守门：硬拒把私有研发引擎文件 / .mcp.json 提交进公有仓
+# silvrblt/legal-case-research。gitignore 挡不住 git add -f；本钩子对暂存区正则硬拦。
+# 本钩子已纳入版本管理（.githooks/），经 core.hooksPath 生效；re-clone 后 bash scripts/_install_hooks.sh 即可。
+# 引擎的版本管理在私有仓 legal-case-engine。如确需公开某文件，删本钩子对应模式再提交。
+
+PATTERN='^(scripts/securities/(coding_contract|run_numeric|compute_kappa|merge_coding|migrate_issues_to_tidy)_secmisrep\.py|scripts/securities/build_[a-z_]+_secmisrep.*\.py|skills/case-research/methodology/codebook-secmisrep\.md|skills/case-research/templates/Securities_Misrep_Codebook\.xlsx|tests/test_coding_contract_secmisrep\.py|research/[^/]+/coding_secmisrep\.json|(^|.*/)\.mcp\.json)$'
+
+blocked=$(git diff --cached --name-only | grep -E "$PATTERN")
+if [ -n "$blocked" ]; then
+  echo "✋ 提交被拦截：以下属私有研发引擎 / 密钥，绝不可进公有仓："
+  echo "$blocked" | sed 's/^/    /'
+  echo "→ 引擎版本管理在私有仓 legal-case-engine；.mcp.json 是法宝订阅 Token 密钥。"
+  echo "→ 如确属误暂存：git restore --staged <文件>"
+  echo "→ 如确需公开：编辑 .githooks/pre-commit 移除对应模式后再提交。"
+  exit 1
+fi
+exit 0
